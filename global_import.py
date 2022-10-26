@@ -6,6 +6,7 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 import json
+from tqdm import tqdm
 
 class bcolors:
     WARNING = '\033[93m'
@@ -17,6 +18,7 @@ load_dotenv()
 RPC_URL = os.getenv("RPC_URL")
 RPC_URL_PUBLIC = os.getenv("RPC_URL_PUBLIC")
 RPC_URL_PUBLIC_ARCHIVAL = os.getenv("RPC_URL_PUBLIC_ARCHIVAL")
+VALIDATOR_ID = os.getenv("VALIDATOR_ID")
 
 class bcolors:
     HEADER = '\033[95m'

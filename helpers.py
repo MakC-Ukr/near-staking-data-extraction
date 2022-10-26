@@ -1,14 +1,37 @@
 from global_import import *
 
+def get_validator_info(validator_id):
+    res_dict = {}
+    payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "validators","params": [None]})
+    curr_validators = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['current_validators']
+    val_info = next(v for v in curr_validators if v["account_id"] == validator_id)
+    total_stake = sum([int(v['stake']) for v in curr_validators])
+
+    res_dict['stake'] = val_info['stake']
+    res_dict['num_expected_blocks'] = val_info['num_expected_blocks']
+    res_dict['num_expected_chunks'] = val_info['num_expected_chunks']
+    res_dict['num_produced_blocks'] = val_info['num_produced_blocks']
+    res_dict['num_produced_chunks'] = val_info['num_produced_chunks']
+    res_dict['total_stake'] = total_stake
+
+    return res_dict
+
+# returns the epoch id for the current block if no block_height is supplied
+def get_epoch_id(block_height = -1):
+    payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"finality": "final"} if block_height == -1 else {"block_id": block_height}})
+    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']
+    ep_id = response['epoch_id']
+    return ep_id
+
 def get_total_supply():
     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"finality": "final"}})
-    response = requests.request("POST", RPC_URL, headers=headers, data=payload).json()['result']['header']
+    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']
     return response['total_supply']
 
 # return the average block time for the past 43200 block (not necessarily in the same block)
 def get_avg_block_time_recent():
     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"finality": "final"}})
-    response = requests.request("POST", RPC_URL, headers=headers, data=payload).json()['result']['header']
+    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']
     curr_height = response['height']
     end_time = response['timestamp']
 
@@ -20,7 +43,7 @@ def get_avg_block_time_recent():
         # the try-except block is added for cases when the specified block was not produced
         try:
             payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"block_id": start_block}})
-            start_time = requests.request("POST", RPC_URL, headers=headers, data=payload).json()['result']['header']['timestamp']
+            start_time = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']['timestamp']
         except:
             start_block+=1
             blocks_to_subtract+=1
@@ -43,7 +66,7 @@ def get_avg_block_time_for_epoch(start_block):
         # the try-except block is added for cases when the specified block was not produced
         try:
             payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"block_id": start_block}})
-            start_time = requests.request("POST", RPC_URL, headers=headers, data=payload).json()['result']['header']['timestamp']
+            start_time = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']['timestamp']
         except:
             start_block+=1
             blocks_to_subtract+=1
@@ -53,7 +76,7 @@ def get_avg_block_time_for_epoch(start_block):
     while end_time < 0:
         try:
             payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"block_id": end_block}})
-            end_time = requests.request("POST", RPC_URL, headers=headers, data=payload).json()['result']['header']['timestamp']
+            end_time = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']['timestamp']
         except:
             end_block-=1
             blocks_to_subtract+=1
@@ -64,7 +87,7 @@ def get_avg_block_time_for_epoch(start_block):
     avg_bl_time = numerator/denominator 
     return avg_bl_time
 
-
+# returns 1 if all the values are as expected. 0 otherwise.
 def confirm_constant_vals():
     # Expected values
     EPOCHS_A_YEAR = 730
@@ -81,7 +104,7 @@ def confirm_constant_vals():
         "method": "EXPERIMENTAL_protocol_config",
         "params": {"finality": "final"}
     })
-    response = requests.request("POST", RPC_URL, headers=headers, data=payload).json()['result']
+    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']
 
     epoch_length = response['epoch_length']
     if epoch_length != EPOCH_LENGTH:
@@ -114,7 +137,3 @@ def confirm_constant_vals():
         all_ok = False
 
     return int(all_ok)
-
-
-
-print(get_avg_block_time_recent())
