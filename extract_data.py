@@ -59,18 +59,21 @@ df_ls = []
 #
 EDGE_BLOCK = 77082691
 
-for addr in tqdm(addresses):
-    before_info = get_acc_info_for_block(addr, EDGE_BLOCK-3) # Assuming these block exist
-    after_info = get_acc_info_for_block(addr, EDGE_BLOCK+4)
-    reward_earned = after_info['amount'] - before_info['amount']
-    df_ls.append({
-        "account_id": addr,
-        "before_amount": before_info['amount'],
-        "before_locked": before_info['locked'],
-        "after_amount": after_info['amount'],
-        "after_locked": after_info['locked'],
-        "rewards": reward_earned,
-        "APY": (reward_earned * 100 * 730 )/ after_info['amount'] 
-    })
+for addr in tqdm(addresses[:10]):
+    try:
+        before_info = get_acc_info_for_block(addr, 80020291) # Assuming these block exist
+        after_info = get_acc_info_for_block(addr, 80023891)
+        reward_earned = float(after_info['locked']) - float(before_info['locked'])
+        df_ls.append({
+            "account_id": addr,
+            "before_amount": float(before_info['amount']),
+            "before_locked": float(before_info['locked']),
+            "after_amount": float(after_info['amount']),
+            "after_locked": float(after_info['locked']),
+            "rewards": reward_earned,
+            "APY": (reward_earned * 100 * 730 )/ float(after_info['amount'])
+        })
+    except:
+        print(bcolors.FAIL, " Error for ", addr, bcolors.ENDC)
 
 pd.DataFrame(df_ls).to_csv(f"data_cache/all_validators-before_and_after_edge_block={EDGE_BLOCK}.csv", index=False)
