@@ -99,7 +99,6 @@ def confirm_constant_vals():
     # Verification of values 
     all_ok = True
 
-    url = "https://rpc.mainnet.near.org"
     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare",
         "method": "EXPERIMENTAL_protocol_config",
         "params": {"finality": "final"}
@@ -137,3 +136,16 @@ def confirm_constant_vals():
         all_ok = False
 
     return int(all_ok)
+
+def get_active_validator_set():
+    payload = json.dumps({
+    "jsonrpc": "2.0",
+    "id": "dontcare",
+    "method": "status",
+    "params": []
+    })
+    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['validators']
+    ls = []
+    for i in response:
+        ls.append(i['account_id'])
+    return ls
