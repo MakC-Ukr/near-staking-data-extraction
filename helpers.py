@@ -28,7 +28,7 @@ def get_total_supply():
     response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']
     return response['total_supply']
 
-# return the average block time for the past 43200 block (not necessarily in the same block)
+# return the average block time for the past 43200 block (not necessarily in the same epoch)
 def get_avg_block_time_recent():
     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"finality": "final"}})
     response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']
