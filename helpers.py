@@ -30,14 +30,16 @@ def get_total_supply():
 # If supplied with epoch start block, it will return the average block time for that epoch
 def get_avg_block_time_for_epoch(start_block):
     end_block = start_block+43200
-    start_time = -1
-    end_time = -1
+    start_time = -100 # set to 100 in order to enter the while loop and stay there for 100 tries
+    end_time = -100
     blocks_to_subtract = 0
 
     while start_time < 0:
         # the try-except block is added for cases when the specified block was not produced
         try:
+            start_time+=1
             payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"block_id": start_block}})
+            print(start_block)
             start_time = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']['timestamp']
         except:
             start_block+=1
@@ -47,6 +49,7 @@ def get_avg_block_time_for_epoch(start_block):
 
     while end_time < 0:
         try:
+            end_time+=1            
             payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"block_id": end_block}})
             end_time = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']['timestamp']
         except:
@@ -88,6 +91,7 @@ def get_block_details(block_height = -1):
     res_dict['total_supply'] = response['header']['total_supply']
     res_dict['block_height'] = response['header']['height']
     res_dict['timestamp'] = response['header']['timestamp']
+    res_dict['prev_epoch_last_block'] = response['header']['next_epoch_id'] # yes, weirdly enough next_epoch_id is actually the block height of the last block of the previous epoch
     return res_dict
 
 def get_constant_vals():

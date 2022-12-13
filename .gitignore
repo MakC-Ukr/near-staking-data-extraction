@@ -1,4 +1,6 @@
 venv/
 .env
-data.csv
+data/
 data_cache/
+data/near_historical.csv
+data/blocks_recorded.csv

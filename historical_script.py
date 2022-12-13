@@ -13,6 +13,7 @@ blocks_df = pd.read_csv(blocks_csv_path)
 
 # Update blocks_recorded csv
 curr_block_details = get_block_details()
+print(bcolors.OKBLUE, "Current block height:", curr_block_details['block_height'], bcolors.ENDC)
 
 # if last block's epoch ID in blocks_recorded.csv is not the same as current block's epoch ID, then need to add new epoch to historical.csv
 if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['epoch_id']:
@@ -25,10 +26,10 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
         new_row[key] = last_recorded_block[key]
     del new_row['block_height']
 
-    start_block = int(last_recorded_block['epoch_start_height'])
+    start_block = int(get_block_details(last_recorded_block['prev_epoch_last_block'])['block_height']) + 1
     new_row['start_block'] = start_block
     new_row['end_block'] = start_block+43200
-    new_row['block_time_empirical'] = TEST_get_avg_block_time_for_epoch(start_block)
+    new_row['block_time_empirical'] = get_avg_block_time_for_epoch(start_block)
     validators_info = get_ALL_validators_info(block_num=start_block+43200-1)
 
     for i, addr in enumerate(RELEVANT_VALIDATORS):
@@ -56,7 +57,6 @@ for key in constant_vals:
     new_row[key] = constant_vals[key]
 for key in curr_block_details:
     new_row[key] = curr_block_details[key]
-new_row['epoch_start_height'] = int(80495491)
 new_row['total_staked'] = get_total_stake()
 blocks_df = pd.concat( [blocks_df, pd.DataFrame([new_row])], ignore_index=True)
 blocks_df.to_csv(blocks_csv_path, index=False)
