@@ -33,20 +33,24 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
     validators_info = get_ALL_validators_info(block_num=start_block+43200-1)
 
     for i, addr in enumerate(RELEVANT_VALIDATORS):
-        before_info = get_acc_info_for_block(addr, start_block) # Assuming these blocks exist
-        after_info = get_acc_info_for_block(addr, start_block+43200)
-        new_row[f'val_{i}_name'] =  addr
-        new_row[f'val_{i}_expected_blocks'] =  validators_info[addr]['expected_blocks']
-        new_row[f'val_{i}_produced_blocks'] =  validators_info[addr]['produced_blocks']
-        new_row[f'val_{i}_expected_chunks'] =  validators_info[addr]['expected_blocks']
-        new_row[f'val_{i}_produced_chunks'] =  validators_info[addr]['produced_blocks']
-        new_row[f'val_{i}_is_slashed'] =  int(validators_info[addr]['is_slashed'])
-        new_row[f'val_{i}_stake'] =  validators_info[addr]['stake']
-        new_row[f'val_{i}_initial_amount'] =  float(before_info['amount'])
-        new_row[f'val_{i}_initial_locked'] =  float(before_info['locked'])
-        new_row[f'val_{i}_final_amount'] =  float(after_info['amount'])
-        new_row[f'val_{i}_final_locked'] =  float(after_info['locked'])
-        time.sleep(0.2)
+        try:
+            before_info = get_acc_info_for_block(addr, start_block) # Assuming these blocks exist
+            after_info = get_acc_info_for_block(addr, start_block+43200)
+            new_row[f'val_{i}_name'] =  addr
+            new_row[f'val_{i}_expected_blocks'] =  validators_info[addr]['expected_blocks']
+            new_row[f'val_{i}_produced_blocks'] =  validators_info[addr]['produced_blocks']
+            new_row[f'val_{i}_expected_chunks'] =  validators_info[addr]['expected_blocks']
+            new_row[f'val_{i}_produced_chunks'] =  validators_info[addr]['produced_blocks']
+            new_row[f'val_{i}_is_slashed'] =  int(validators_info[addr]['is_slashed'])
+            new_row[f'val_{i}_stake'] =  validators_info[addr]['stake']
+            new_row[f'val_{i}_initial_amount'] =  float(before_info['amount'])
+            new_row[f'val_{i}_initial_locked'] =  float(before_info['locked'])
+            new_row[f'val_{i}_final_amount'] =  float(after_info['amount'])
+            new_row[f'val_{i}_final_locked'] =  float(after_info['locked'])
+            time.sleep(0.2)
+            print(addr, " done")
+        except:
+            print(bcolors.FAIL, addr, " failed", bcolors.ENDC)
     historical_df = pd.concat( [historical_df, pd.DataFrame([new_row])], ignore_index=True)
     historical_df.to_csv(historical_csv_path, index=False)
     

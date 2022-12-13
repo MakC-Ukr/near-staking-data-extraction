@@ -137,7 +137,6 @@ def get_ALL_validators_info(block_num):
     return res_dict
 
 def get_acc_info_for_block(account_id, block_height):
-
     payload = json.dumps({
     "jsonrpc": "2.0",
     "id": "dontcare",
@@ -147,7 +146,7 @@ def get_acc_info_for_block(account_id, block_height):
         "block_id": block_height,
         "account_id": str(account_id)
     }})
-    response = requests.request("POST", RPC_URL, headers=headers, data=payload).json()['result']
+    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']
     return response
 
 if __name__ == '__main__':
