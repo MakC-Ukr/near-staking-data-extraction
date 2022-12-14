@@ -1,3 +1,5 @@
+from helpers import *
+
 if __name__ == '__main__':
     start_block = 80495491
     RELEVANT_VALIDATORS = json.load(open("RELEVANT_VALIDATORS.json"))
@@ -22,3 +24,6 @@ if __name__ == '__main__':
         time.sleep(0.2)
         df_ls.append(new_row)
         print(addr)
+
+    df = pd.DataFrame(df_ls)
+    df.to_csv('apy_check.csv', index=False)
