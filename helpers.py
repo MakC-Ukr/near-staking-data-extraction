@@ -1,4 +1,5 @@
 from global_import import *
+import base64 as b64
 
 def get_validator_info(validator_id):
     """Returns validator info for the given validator_id. Expected and produced block info is for the current running epoch"""
@@ -150,4 +151,19 @@ def get_acc_info_for_block(account_id, block_height):
     return response
 
 if __name__ == '__main__':
-    print("Hello world")
+    from_index = 0
+    TEXT = f'{{"from_index": {from_index},"limit": 500}}'
+    base64 = b64.b64encode(bytes(TEXT,encoding='utf8')).decode('utf-8')
+    payload = json.dumps({
+    "jsonrpc": "2.0",
+    "id": "dontcare",
+    "method": "query",
+    "params": {
+        "request_type": "call_function",
+        "finality": "final",
+        "account_id": 'steak.poolv1.near',
+        "method_name": "get_owner_id",
+        "args_base64": base64
+    }})
+    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()
+    print(response)
