@@ -1,5 +1,8 @@
 from global_import import *
 import base64 as b64
+from near_api.providers import JsonProvider
+from near_api.account import Account
+import near_api
 
 def get_validator_info(validator_id):
     """Returns validator info for the given validator_id. Expected and produced block info is for the current running epoch"""
@@ -150,20 +153,50 @@ def get_acc_info_for_block(account_id, block_height):
     response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']
     return response
 
-if __name__ == '__main__':
+# param validator - account_id of the validator
+# param block_id - (epoch_id OR block_height) at which we want to get the list of accounts
+def get_validator_accounts(validator, block_id):
+    near_provider = JsonProvider(RPC_URL_PUBLIC_ARCHIVAL)    
+    accounts = []
     from_index = 0
-    TEXT = f'{{"from_index": {from_index},"limit": 500}}'
-    base64 = b64.b64encode(bytes(TEXT,encoding='utf8')).decode('utf-8')
-    payload = json.dumps({
-    "jsonrpc": "2.0",
-    "id": "dontcare",
-    "method": "query",
-    "params": {
-        "request_type": "call_function",
-        "finality": "final",
-        "account_id": 'steak.poolv1.near',
-        "method_name": "get_owner_id",
-        "args_base64": base64
-    }})
-    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()
-    print(response)
+    has_more_accounts = True
+    while has_more_accounts:
+        TEXT = f'{{"from_index": {from_index},"limit": 500}}'
+        base64 = b64.b64encode(bytes(TEXT,encoding='utf8')).decode('utf-8')
+        r = near_provider.json_rpc("query", {
+            "request_type": "call_function", 
+            "block_id": block_id,
+            "account_id": validator,
+            "method_name": "get_accounts",
+            "args_base64": base64
+        }, timeout=60)
+        lst = r.get('result')
+        current_accounts = json.loads(''.join(chr(v) for v in lst))
+        if len(current_accounts) == 0:
+            has_more_accounts = False
+        accounts += current_accounts
+        from_index += 500
+    return accounts
+
+# param start_block and end_block can also be epoch IDs (I guess) # TODO
+def get_rewards_for_epoch(validator, start_block, end_block):
+    near_provider = JsonProvider(RPC_URL_PUBLIC_ARCHIVAL)    
+    accounts_info = get_validator_accounts(validator, end_block)    
+    previous_epoch_accounts_info = get_validator_accounts(validator,start_block)
+
+    total_staked_in_beginning = 0
+    total_unstaked = 0
+    total_rewards = 0
+
+    for account in accounts_info:
+        current_account_id = account['account_id']
+        previous_epoch_account = list(filter(lambda p_account: p_account['account_id'] == current_account_id, previous_epoch_accounts_info))
+        total_staked_in_beginning += int(account["staked_balance"])
+        total_unstaked += int(account["unstaked_balance"]) 
+        if len(previous_epoch_account) > 0:
+            total_rewards += int(account["staked_balance"]) - int(previous_epoch_account[0]["staked_balance"])
+            
+    return total_staked_in_beginning, total_unstaked, total_rewards
+
+if __name__ == '__main__':
+    print("hello world")
