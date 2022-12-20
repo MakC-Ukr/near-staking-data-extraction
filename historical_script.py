@@ -32,19 +32,30 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
     new_row['block_time_empirical'] = get_avg_block_time_for_epoch(start_block)
     validators_info = get_ALL_validators_info(block_num=start_block+43200-1)
 
+    tries = 0
     for i, addr in enumerate(RELEVANT_VALIDATORS):
         try:
+            print(addr)
             new_row[f'val_{i}_name'] =  addr
             new_row[f'val_{i}_expected_blocks'] =  validators_info[addr]['expected_blocks']
             new_row[f'val_{i}_produced_blocks'] =  validators_info[addr]['produced_blocks']
             new_row[f'val_{i}_expected_chunks'] =  validators_info[addr]['expected_blocks']
             new_row[f'val_{i}_produced_chunks'] =  validators_info[addr]['produced_blocks']
             new_row[f'val_{i}_is_slashed'] =  int(validators_info[addr]['is_slashed'])
-            new_row[f'val_{i}_stake'] =  validators_info[addr]['stake']
+            new_row[f'val_{i}_sum_stake'] =  int(validators_info[addr]['stake'])
             rew_res = get_rewards_for_epoch(addr,new_row['start_block'], new_row['end_block'])
+            new_row[f'val_{i}_active_stake'] =  int(rew_res[0])
+            new_row[f'val_{i}_inactive_stake'] =  int(rew_res[1])
             new_row[f'val_{i}_rewards'] = float(rew_res[2])
+            print(bcolors.OKBLUE, float(rew_res[2])/float(rew_res[0])*561*100, "% APY", bcolors.ENDC)
+            print(new_row)
+            print()
             time.sleep(0.2)
+            tries = 0
         except:
+            tries += 1
+            if tries > 5:
+                exit()
             print(bcolors.FAIL, addr, " failed", bcolors.ENDC)
     historical_df = pd.concat( [historical_df, pd.DataFrame([new_row])], ignore_index=True)
     historical_df.to_csv(historical_csv_path, index=False)
