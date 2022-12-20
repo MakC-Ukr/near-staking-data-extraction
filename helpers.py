@@ -193,10 +193,17 @@ def get_rewards_for_epoch(validator, start_block, end_block):
         previous_epoch_account = list(filter(lambda p_account: p_account['account_id'] == current_account_id, previous_epoch_accounts_info))
         total_staked_in_beginning += int(account["staked_balance"])
         total_unstaked += int(account["unstaked_balance"]) 
-        if len(previous_epoch_account) > 0:
-            total_rewards += int(account["staked_balance"]) - int(previous_epoch_account[0]["staked_balance"])
+
+        if len(previous_epoch_account) == 0:
+            rew = 0
+        else:
+            rew = int(account["staked_balance"]) - int(previous_epoch_account[0]["staked_balance"])
+            if rew < 0:
+                rew = 0
+        
+        total_rewards += rew
             
-    return total_staked_in_beginning, total_unstaked, total_rewards
+    return int(total_staked_in_beginning), int(total_unstaked), int(total_rewards)
 
 if __name__ == '__main__':
-    print("hello world")
+    print(get_rewards_for_epoch('zavodil.poolv1.near', 81013891,81057091))
