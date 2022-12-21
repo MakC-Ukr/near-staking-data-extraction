@@ -21,16 +21,18 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
     last_recorded_block = blocks_df.iloc[-1]
     new_row = {}
 
-    # Retrieve all relevant values from the last block in blocks_recorded.csv
-    for key in last_recorded_block.keys():
-        new_row[key] = last_recorded_block[key]
-    del new_row['block_height']
-
     start_block = int(get_block_details(last_recorded_block['prev_epoch_last_block'])['block_height']) + 1
+    new_row['epoch_height'] = int((start_block-last_recorded_block['GENESIS_HEIGHT'])//43200)
     new_row['start_block'] = start_block
     new_row['end_block'] = start_block+43200
     new_row['block_time_empirical'] = get_avg_block_time_for_epoch(start_block)
     validators_info = get_ALL_validators_info(block_num=start_block+43200-1)
+
+    # Retrieve all relevant values from the last block in blocks_recorded.csv
+    for key in last_recorded_block.keys():
+        new_row[key] = last_recorded_block[key]
+    del new_row['block_height'] 
+
 
     tries = 0
     for i, addr in enumerate(RELEVANT_VALIDATORS):
