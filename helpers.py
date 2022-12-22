@@ -112,6 +112,7 @@ def get_constant_vals():
     res_dict['ONLINE_THRESHOLD_MAX'] = float(response['online_max_threshold'][0]/response['online_max_threshold'][1])
     res_dict['BLOCK_PRODUCER_KICKOUT_THRESHOLD'] = int(response['block_producer_kickout_threshold'])
     res_dict['CHUNK_PRODUCER_KICKOUT_THRESHOLD'] = int(response['block_producer_kickout_threshold'])
+    res_dict['GENESIS_HEIGHT'] = int(response['genesis_height'])
     return res_dict
 
 def get_total_stake(block_num = -1):
@@ -156,7 +157,7 @@ def get_acc_info_for_block(account_id, block_height):
 # param validator - account_id of the validator
 # param block_id - (epoch_id OR block_height) at which we want to get the list of accounts
 def get_validator_accounts(validator, block_id):
-    near_provider = JsonProvider(RPC_URL_PUBLIC_ARCHIVAL)    
+    near_provider = JsonProvider(RPC_URL_PUBLIC)    
     accounts = []
     from_index = 0
     has_more_accounts = True
@@ -236,7 +237,21 @@ def get_rewards_for_epoch(validator, start_block, end_block):
     df.to_csv(f"data/validators/{validator}.csv", index=False)
 
     median_diff_in_stake = df['rew/stk'].median()
-    return int(total_staked_in_beginning), int(total_unstaked), int(total_rewards), median_diff_in_stake
+    return int(total_staked_in_beginning), int(total_rewards), median_diff_in_stake
+
+def v2_get_rewards_for_epoch(addr, start_block, end_block):
+    epoch_before = get_ALL_validators_info(start_block-1)  
+    epoch_curr = get_ALL_validators_info(end_block-1)
+
+    for i in epoch_before.keys():
+        if i == addr:
+            sum1 = int(epoch_before[i]['stake'])//1e24
+
+    for i in epoch_curr.keys():
+        if i == addr:
+            sum2 = int(epoch_curr[i]['stake'])//1e24
+
+    return int(sum1), int(sum2-sum1)
 
 # Powered by Nearblocks.io APIs - (leave this comment in your code)
 def get_recent_stake_txns_for_validator(validator_addr, start_block, end_block):
@@ -273,24 +288,32 @@ def get_recent_stake_txns_for_validator(validator_addr, start_block, end_block):
 
     return stake_transactions, added_stake_amount
 
+def get_rewards_v2(addr, first_block, last_block):
+    epoch_before = get_ALL_validators_info(first_block-1)  
+    epoch_curr = get_ALL_validators_info(last_block-1)
+    for i in epoch_before.keys():
+        if i == addr:
+            sum1 = int(epoch_before[i]['stake'])
+    for i in epoch_curr.keys():
+        if i == addr:
+            sum2 = int(epoch_curr[i]['stake'])
+    return int(sum2-sum1)
+
+def get_validator_commission(validator, block_num):
+    """Returns validator commisisons (in %). Block_num passed should be some recent block number"""
+    near_provider = JsonProvider(RPC_URL_PUBLIC)
+    TEXT = f'{{}}'
+    base64 = b64.b64encode(bytes(TEXT,encoding='utf8')).decode('utf-8')
+    r = near_provider.json_rpc("query", {
+        "request_type": "call_function", 
+        "block_id": block_num,
+        "account_id": validator,
+        "method_name": "get_reward_fee_fraction",
+        "args_base64": base64
+    }, timeout=60)
+    lst = r.get('result')
+    commission = json.loads(''.join(chr(v) for v in lst))
+    return commission['numerator']
+
 if __name__ == '__main__':
-    addr = 'chorusone.poolv1.near'
-    new_row = {}
-    new_row['start_block'] = 81100291
-    new_row['end_block'] = 81143491
-
-    rew_res = get_rewards_for_epoch(addr,new_row['start_block'], new_row['end_block'])
-    added_stake = get_recent_stake_txns_for_validator(addr, new_row['start_block'], new_row['end_block'])
-
-    print(rew_res)
-    print(added_stake[1])
-    print()
-    print()
-    print()
-    print()
-    print()
-    print()
-    print()
-    print()
-    print()
-    print(added_stake[0])
+    json.dump(get_recent_stake_txns_for_validator('twinstake.poolv1.near', 80365685, 100000000)[0], open("twinstake.json", "w"))
