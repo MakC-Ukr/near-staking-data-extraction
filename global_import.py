@@ -18,7 +18,7 @@ load_dotenv()
 RPC_URL = os.getenv("RPC_URL")
 RPC_URL_PUBLIC = os.getenv("RPC_URL_PUBLIC")
 RPC_URL_PUBLIC_ARCHIVAL = os.getenv("RPC_URL_PUBLIC_ARCHIVAL")
-VALIDATOR_ID = os.getenv("VALIDATOR_ID")
+NEAR_BLOCKS_API = 'https://api.nearblocks.io/v1/'
 
 class bcolors:
     HEADER = '\033[95m'

@@ -112,6 +112,7 @@ def get_constant_vals():
     res_dict['ONLINE_THRESHOLD_MAX'] = float(response['online_max_threshold'][0]/response['online_max_threshold'][1])
     res_dict['BLOCK_PRODUCER_KICKOUT_THRESHOLD'] = int(response['block_producer_kickout_threshold'])
     res_dict['CHUNK_PRODUCER_KICKOUT_THRESHOLD'] = int(response['block_producer_kickout_threshold'])
+    res_dict['GENESIS_HEIGHT'] = int(response['genesis_height'])
     return res_dict
 
 def get_total_stake(block_num = -1):
@@ -156,7 +157,7 @@ def get_acc_info_for_block(account_id, block_height):
 # param validator - account_id of the validator
 # param block_id - (epoch_id OR block_height) at which we want to get the list of accounts
 def get_validator_accounts(validator, block_id):
-    near_provider = JsonProvider(RPC_URL_PUBLIC_ARCHIVAL)    
+    near_provider = JsonProvider(RPC_URL_PUBLIC)    
     accounts = []
     from_index = 0
     has_more_accounts = True
@@ -178,7 +179,7 @@ def get_validator_accounts(validator, block_id):
         from_index += 500
     return accounts
 
-# param start_block and end_block can also be epoch IDs (I guess) # TODO
+# param start_block and end_block can also be epoch IDs (I guess)
 def get_rewards_for_epoch(validator, start_block, end_block):
     near_provider = JsonProvider(RPC_URL_PUBLIC_ARCHIVAL)    
     accounts_info = get_validator_accounts(validator, end_block)    
@@ -188,22 +189,131 @@ def get_rewards_for_epoch(validator, start_block, end_block):
     total_unstaked = 0
     total_rewards = 0
 
-    for account in accounts_info:
+    for ind, account in enumerate(accounts_info):
         current_account_id = account['account_id']
         previous_epoch_account = list(filter(lambda p_account: p_account['account_id'] == current_account_id, previous_epoch_accounts_info))
-        total_staked_in_beginning += int(account["staked_balance"])
-        total_unstaked += int(account["unstaked_balance"]) 
 
         if len(previous_epoch_account) == 0:
-            rew = 0
+            rew = float(account['staked_balance'])
         else:
+            total_staked_in_beginning += int(previous_epoch_account[0]["staked_balance"])
+            total_unstaked += int(previous_epoch_account[0]["unstaked_balance"])
             rew = int(account["staked_balance"]) - int(previous_epoch_account[0]["staked_balance"])
             if rew < 0:
-                rew = 0
-        
+                rew = 0        
         total_rewards += rew
-            
-    return int(total_staked_in_beginning), int(total_unstaked), int(total_rewards)
+
+    # TODO: can delete the dataframe part later
+    df_ls = []
+    for account in accounts_info:
+        current_delegator = {}
+        current_account_id = account['account_id']
+
+        previous_epoch_account = list(filter(lambda p_account: p_account['account_id'] == current_account_id, previous_epoch_accounts_info))
+        if len(previous_epoch_account) == 0:
+            rewards = float(account['staked_balance'])
+            previous_stake_balance = 0
+        else:
+            rewards = int(account["staked_balance"]) - int(previous_epoch_account[0]["staked_balance"])
+            previous_stake_balance = int(previous_epoch_account[0]["staked_balance"])
+        
+        if rewards < 0:
+            rewards = 0
+
+        current_delegator["delegator"] = current_account_id
+        current_delegator["validator"] = validator
+        current_delegator["balance_staked"] = int(account["staked_balance"]) / 10**24
+        current_delegator["balance_unstaked"] = int(account["unstaked_balance"]) / 10**24
+        current_delegator["rewards"] = rewards / 10**24   
+        
+        if float(current_delegator["balance_staked"]) > 0:
+            current_delegator['rew/stk'] = float(current_delegator["rewards"]) / float(current_delegator["balance_staked"])
+        else:
+            current_delegator['rew/stk'] = 0
+
+        df_ls.append(current_delegator)
+    
+    df = pd.DataFrame(df_ls)
+    df.to_csv(f"data/validators/{validator}.csv", index=False)
+
+    median_diff_in_stake = df['rew/stk'].median()
+    return int(total_staked_in_beginning), int(total_rewards), median_diff_in_stake
+
+def v2_get_rewards_for_epoch(addr, start_block, end_block):
+    epoch_before = get_ALL_validators_info(start_block-1)  
+    epoch_curr = get_ALL_validators_info(end_block-1)
+
+    for i in epoch_before.keys():
+        if i == addr:
+            sum1 = int(epoch_before[i]['stake'])//1e24
+
+    for i in epoch_curr.keys():
+        if i == addr:
+            sum2 = int(epoch_curr[i]['stake'])//1e24
+
+    return int(sum1), int(sum2-sum1)
+
+# Powered by Nearblocks.io APIs - (leave this comment in your code)
+def get_recent_stake_txns_for_validator(validator_addr, start_block, end_block):
+    headers = {'accept': '*/*'}
+    page_no = 1
+
+    stake_transactions = []
+    fetch_more_txns = True
+    added_stake_amount = 0
+
+    while(fetch_more_txns):
+        print(bcolors.OKCYAN, "Fetching Txns from Near Blocks", bcolors.ENDC)
+
+        if page_no > 5:
+            print(bcolors.FAIL, "Too many pages, something is wrong", bcolors.ENDC)
+            break
+
+        fetch_more_txns = False
+        params = {'page': str(page_no), 'per_page': '25', 'order': 'desc', 'method': 'deposit_and_stake'}
+        url = f'{NEAR_BLOCKS_API}/account/{validator_addr}/txns'
+        response = requests.get(url, params=params, headers=headers).json()
+
+        for txn in response['txns']:
+            for action in txn['actions']:
+                if action['method'] == "deposit_and_stake" and txn['block']['block_height'] > start_block and txn['block']['block_height'] < end_block:
+                    stake_transactions.append(txn)
+                    added_stake_amount += txn['actions_agg']['deposit']
+
+        # fetch more transactions from API if the last transaction is more recent than the start_block
+        if response['txns'][-1]['block']['block_height'] > start_block:
+            fetch_more_txns = True
+            page_no += 1
+            time.sleep(10)
+
+    return stake_transactions, added_stake_amount
+
+def get_rewards_v2(addr, first_block, last_block):
+    epoch_before = get_ALL_validators_info(first_block-1)  
+    epoch_curr = get_ALL_validators_info(last_block-1)
+    for i in epoch_before.keys():
+        if i == addr:
+            sum1 = int(epoch_before[i]['stake'])
+    for i in epoch_curr.keys():
+        if i == addr:
+            sum2 = int(epoch_curr[i]['stake'])
+    return int(sum2-sum1)
+
+def get_validator_commission(validator, block_num):
+    """Returns validator commisisons (in %). Block_num passed should be some recent block number"""
+    near_provider = JsonProvider(RPC_URL_PUBLIC)
+    TEXT = f'{{}}'
+    base64 = b64.b64encode(bytes(TEXT,encoding='utf8')).decode('utf-8')
+    r = near_provider.json_rpc("query", {
+        "request_type": "call_function", 
+        "block_id": block_num,
+        "account_id": validator,
+        "method_name": "get_reward_fee_fraction",
+        "args_base64": base64
+    }, timeout=60)
+    lst = r.get('result')
+    commission = json.loads(''.join(chr(v) for v in lst))
+    return commission['numerator']
 
 if __name__ == '__main__':
-    print("Hello world")
+    json.dump(get_recent_stake_txns_for_validator('twinstake.poolv1.near', 80365685, 100000000)[0], open("twinstake.json", "w"))
