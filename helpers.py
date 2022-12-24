@@ -316,4 +316,4 @@ def get_validator_commission(validator, block_num):
     return commission['numerator']
 
 if __name__ == '__main__':
-    json.dump(get_recent_stake_txns_for_validator('twinstake.poolv1.near', 80365685, 100000000)[0], open("twinstake.json", "w"))
+    print("Hello world")

@@ -31,18 +31,19 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
     # Retrieve all relevant values from the last block in blocks_recorded.csv
     for key in last_recorded_block.keys():
         new_row[key] = last_recorded_block[key]
-    del new_row['block_height'] 
+    del new_row['block_height']
 
 
     tries = 0
     for i, addr in enumerate(RELEVANT_VALIDATORS):
-        try:
+            new_row[f'val_{i}_name'] =  addr
+        
+        # try:
             print(addr)
             change_in_stake = get_rewards_for_epoch(addr,new_row['start_block'], new_row['end_block'])
             added_stake = int(get_recent_stake_txns_for_validator(addr, new_row['start_block'], new_row['end_block'])[1])
             rewards_v2 = int(get_rewards_v2(addr, new_row['start_block'], new_row['end_block']))
 
-            new_row[f'val_{i}_name'] =  addr
             new_row[f'val_{i}_expected_blocks'] =  validators_info[addr]['expected_blocks']
             new_row[f'val_{i}_produced_blocks'] =  validators_info[addr]['produced_blocks']
             new_row[f'val_{i}_expected_chunks'] =  validators_info[addr]['expected_blocks']
@@ -62,14 +63,15 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
             print()
             time.sleep(0.2)
             tries = 0
-        except:
-            tries += 1
-            if tries > 5:
-                exit()
-            print(bcolors.FAIL, addr, " failed", bcolors.ENDC)
+        # except:
+        #     tries += 1
+        #     if tries > 5:
+        #         exit()
+        #     time.sleep(60)
+        #     print(bcolors.FAIL, addr, " failed", bcolors.ENDC)
     historical_df = pd.concat( [historical_df, pd.DataFrame([new_row])], ignore_index=True)
     historical_df.to_csv(historical_csv_path, index=False)
-    
+
 # No new epoch detected. Record latest block in blocks_recorded.csv
 new_row = {}
 constant_vals = get_constant_vals()

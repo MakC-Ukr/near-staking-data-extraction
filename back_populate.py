@@ -5,15 +5,23 @@ data_dir_path = os.path.join(base_dir_path, 'data')
 blocks_csv_path = os.path.join(data_dir_path, 'blocks_recorded.csv')
 blocks_df = pd.read_csv(blocks_csv_path)
 
-for i in range(len(blocks_df)):
+historical_csv_path = os.path.join(data_dir_path, 'back_populated.csv')
+historical_df = pd.read_csv(historical_csv_path)
+
+# get all rows from blocks_df where epoch_id is not in historical_df 
+blocks_df = blocks_df[~blocks_df['epoch_id'].isin(historical_df['epoch_id'])]
+blocks_df.reset_index(drop=True, inplace=True)
+
+#delete rows from blocks_df which have duplicate epoch_id
+blocks_df = blocks_df.drop_duplicates(subset=['epoch_id'], keep='first')
+print(blocks_df)
+
+for i in tqdm(range(len(blocks_df)-1)):
     BLOCK_FROM_RECORDED_BLOCKS_DF = int(blocks_df.iloc[i]['block_height'])
     ANY_BLOCK_FROM_EPOCH = int(blocks_df.iloc[i+1]['block_height'])
 
     t = time.time()
     RELEVANT_VALIDATORS = json.load(open("RELEVANT_VALIDATORS.json"))
-
-    historical_csv_path = os.path.join(data_dir_path, 'back_populated.csv')
-    historical_df = pd.read_csv(historical_csv_path)
 
     curr_block_details = get_block_details(ANY_BLOCK_FROM_EPOCH)
     print(bcolors.OKBLUE, "Current block height:", curr_block_details['block_height'], bcolors.ENDC)
