@@ -30,6 +30,7 @@ for i in tqdm(range(len(blocks_df)-1)):
     for key in last_recorded_block.keys():
         new_row[key] = last_recorded_block[key]
     del new_row['block_height']
+    
     start_block = int(get_block_details(last_recorded_block['prev_epoch_last_block'])['block_height']) + 1
     new_row['epoch_height'] = int((start_block-last_recorded_block['GENESIS_HEIGHT'])//43200)
     new_row['start_block'] = start_block
@@ -39,7 +40,7 @@ for i in tqdm(range(len(blocks_df)-1)):
 
     tries = 0
     for i, addr in enumerate(RELEVANT_VALIDATORS):
-        try:
+        # try:
             print(addr)
             change_in_stake = get_rewards_for_epoch(addr,new_row['start_block'], new_row['end_block'])
             added_stake = int(get_recent_stake_txns_for_validator(addr, new_row['start_block'], new_row['end_block'])[1])
@@ -65,12 +66,12 @@ for i in tqdm(range(len(blocks_df)-1)):
             print()
             time.sleep(0.2)
             tries = 0
-        except:
-            tries += 1
-            if tries > 5:
-                exit()
-            print(bcolors.FAIL, addr, " failed", bcolors.ENDC)
-            time.sleep(30)
+        # except:
+        #     tries += 1
+        #     if tries > 5:
+        #         exit()
+        #     print(bcolors.FAIL, addr, " failed", bcolors.ENDC)
+        #     time.sleep(30)
     historical_df = pd.concat( [historical_df, pd.DataFrame([new_row])], ignore_index=True)
     historical_df.to_csv(historical_csv_path, index=False)
 

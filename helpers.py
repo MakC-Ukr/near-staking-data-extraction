@@ -239,19 +239,19 @@ def get_rewards_for_epoch(validator, start_block, end_block):
     median_diff_in_stake = df['rew/stk'].median()
     return int(total_staked_in_beginning), int(total_rewards), median_diff_in_stake
 
-def v2_get_rewards_for_epoch(addr, start_block, end_block):
-    epoch_before = get_ALL_validators_info(start_block-1)  
-    epoch_curr = get_ALL_validators_info(end_block-1)
+# def v2_get_rewards_for_epoch(addr, start_block, end_block):
+#     epoch_before = get_ALL_validators_info(start_block-1)  
+#     epoch_curr = get_ALL_validators_info(end_block-1)
 
-    for i in epoch_before.keys():
-        if i == addr:
-            sum1 = int(epoch_before[i]['stake'])//1e24
+#     for i in epoch_before.keys():
+#         if i == addr:
+#             sum1 = int(epoch_before[i]['stake'])//1e24
 
-    for i in epoch_curr.keys():
-        if i == addr:
-            sum2 = int(epoch_curr[i]['stake'])//1e24
+#     for i in epoch_curr.keys():
+#         if i == addr:
+#             sum2 = int(epoch_curr[i]['stake'])//1e24
 
-    return int(sum1), int(sum2-sum1)
+#     return int(sum1), int(sum2-sum1)
 
 # Powered by Nearblocks.io APIs - (leave this comment in your code)
 def get_recent_stake_txns_for_validator(validator_addr, start_block, end_block):
@@ -291,6 +291,10 @@ def get_recent_stake_txns_for_validator(validator_addr, start_block, end_block):
 def get_rewards_v2(addr, first_block, last_block):
     epoch_before = get_ALL_validators_info(first_block-1)  
     epoch_curr = get_ALL_validators_info(last_block-1)
+    
+    sum1 = 0
+    sum2 = 0
+
     for i in epoch_before.keys():
         if i == addr:
             sum1 = int(epoch_before[i]['stake'])

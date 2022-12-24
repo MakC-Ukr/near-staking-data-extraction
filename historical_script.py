@@ -33,7 +33,6 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
         new_row[key] = last_recorded_block[key]
     del new_row['block_height']
 
-
     tries = 0
     for i, addr in enumerate(RELEVANT_VALIDATORS):
             new_row[f'val_{i}_name'] =  addr
