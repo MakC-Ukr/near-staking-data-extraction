@@ -320,4 +320,7 @@ def get_validator_commission(validator, block_num):
     return commission['numerator']
 
 if __name__ == '__main__':
-    print("Hello world")
+    block_height = '8EmDp6mY1VedxyZrWcDsmF9wUT5kPFCQ4HKyS6UBN6sv'
+    payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"finality": "final"} if block_height == -1 else {"block_id": block_height}})
+    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']
+    print(response)

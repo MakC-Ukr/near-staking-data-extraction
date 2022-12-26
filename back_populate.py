@@ -40,13 +40,13 @@ for i in tqdm(range(len(blocks_df)-1)):
 
     tries = 0
     for i, addr in enumerate(RELEVANT_VALIDATORS):
-        # try:
+        new_row[f'val_{i}_name'] =  addr
+        try:
             print(addr)
             change_in_stake = get_rewards_for_epoch(addr,new_row['start_block'], new_row['end_block'])
             added_stake = int(get_recent_stake_txns_for_validator(addr, new_row['start_block'], new_row['end_block'])[1])
             rewards_v2 = int(get_rewards_v2(addr, new_row['start_block'], new_row['end_block']))
 
-            new_row[f'val_{i}_name'] =  addr
             new_row[f'val_{i}_expected_blocks'] =  validators_info[addr]['expected_blocks']
             new_row[f'val_{i}_produced_blocks'] =  validators_info[addr]['produced_blocks']
             new_row[f'val_{i}_expected_chunks'] =  validators_info[addr]['expected_blocks']
@@ -66,12 +66,12 @@ for i in tqdm(range(len(blocks_df)-1)):
             print()
             time.sleep(0.2)
             tries = 0
-        # except:
-        #     tries += 1
-        #     if tries > 5:
-        #         exit()
-        #     print(bcolors.FAIL, addr, " failed", bcolors.ENDC)
-        #     time.sleep(30)
+        except:
+            tries += 1
+            if tries > 5:
+                exit()
+            print(bcolors.FAIL, addr, " failed", bcolors.ENDC)
+            time.sleep(30)
     historical_df = pd.concat( [historical_df, pd.DataFrame([new_row])], ignore_index=True)
     historical_df.to_csv(historical_csv_path, index=False)
 
