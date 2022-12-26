@@ -233,9 +233,6 @@ def get_rewards_for_epoch(validator, start_block, end_block):
 
         df_ls.append(current_delegator)
     
-    df = pd.DataFrame(df_ls)
-    df.to_csv(f"data/validators/{validator}.csv", index=False)
-
     median_diff_in_stake = df['rew/stk'].median()
     return int(total_staked_in_beginning), int(total_rewards), median_diff_in_stake
 
