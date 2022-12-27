@@ -1,9 +1,8 @@
 from helpers import *
 
 t = time.time()
-RELEVANT_VALIDATORS = json.load(open("RELEVANT_VALIDATORS.json"))
-
 base_dir_path = os.path.dirname(os.path.realpath(__file__))
+RELEVANT_VALIDATORS = json.load(open(f"{base_dir_path}/RELEVANT_VALIDATORS.json"))
 data_dir_path = os.path.join(base_dir_path, 'data')
 historical_csv_path = os.path.join(data_dir_path, 'near_historical.csv')
 blocks_csv_path = os.path.join(data_dir_path, 'blocks_recorded.csv')
@@ -33,16 +32,16 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
         new_row[key] = last_recorded_block[key]
     del new_row['block_height']
 
-
     tries = 0
     for i, addr in enumerate(RELEVANT_VALIDATORS):
+        new_row[f'val_{i}_name'] =  addr
+        
         try:
             print(addr)
             change_in_stake = get_rewards_for_epoch(addr,new_row['start_block'], new_row['end_block'])
             added_stake = int(get_recent_stake_txns_for_validator(addr, new_row['start_block'], new_row['end_block'])[1])
             rewards_v2 = int(get_rewards_v2(addr, new_row['start_block'], new_row['end_block']))
 
-            new_row[f'val_{i}_name'] =  addr
             new_row[f'val_{i}_expected_blocks'] =  validators_info[addr]['expected_blocks']
             new_row[f'val_{i}_produced_blocks'] =  validators_info[addr]['produced_blocks']
             new_row[f'val_{i}_expected_chunks'] =  validators_info[addr]['expected_blocks']
