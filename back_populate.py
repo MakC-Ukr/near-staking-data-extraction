@@ -62,7 +62,7 @@ for i in tqdm(range(len(blocks_df)-1)):
             new_row[f'val_{i}_total_rewards_v2'] = rewards_v2
 
             # print(bcolors.OKGREEN, "New method", (float(chaçnge_in_stake[1]) - added_stake)/float(change_in_stake[0]-added_stake)*640*100, "% APY", bcolors.ENDC)
-            print(new_row)
+            # print(new_row)
             print()
             time.sleep(0.2)
             tries = 0
