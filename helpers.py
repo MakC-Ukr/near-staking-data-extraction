@@ -233,6 +233,7 @@ def get_rewards_for_epoch(validator, start_block, end_block):
 
         df_ls.append(current_delegator)
     
+    df = pd.DataFrame(df_ls)
     median_diff_in_stake = df['rew/stk'].median()
     return int(total_staked_in_beginning), int(total_rewards), median_diff_in_stake
 
@@ -317,7 +318,8 @@ def get_validator_commission(validator, block_num):
     return commission['numerator']
 
 if __name__ == '__main__':
-    block_height = '8EmDp6mY1VedxyZrWcDsmF9wUT5kPFCQ4HKyS6UBN6sv'
-    payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"finality": "final"} if block_height == -1 else {"block_id": block_height}})
-    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']
-    print(response)
+    print(get_block_details(81532822))
+    # vals = get_ALL_validators_info(81532290+43200)
+    # s = [int(vals[i]['stake']) for i in vals.keys()]
+    # s = sum(s)
+    # print(s)
