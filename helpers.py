@@ -19,6 +19,21 @@ def get_validator_info(validator_id):
     res_dict['total_stake'] = total_stake
     return res_dict
 
+def get_transaction_by_hash(tx_hash, msg_sender):
+    """Returns the transaction from NEAR RPC API. The msg.sendr is required to query the relevant shard"""
+    payload = json.dumps({
+        "jsonrpc": "2.0", 
+        "id": "dontcare", 
+        "method": "EXPERIMENTAL_tx_status",
+        "params": [f"{tx_hash}", f"{msg_sender}"]
+    })
+    try:
+        response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']
+    except:
+        response = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()['result']
+        print("Archival node was used")
+    return response
+
 # returns the epoch id for the current block if no block_height is supplied
 def get_epoch_id(block_height = -1):
     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"finality": "final"} if block_height == -1 else {"block_id": block_height}})
@@ -261,7 +276,7 @@ def get_recent_stake_txns_for_validator(validator_addr, start_block, end_block):
     added_stake_amount = 0
 
     while(fetch_more_txns):
-        print(bcolors.OKCYAN, "Fetching Txns from Near Blocks", bcolors.ENDC)
+        print(bcolors.OKCYAN, "Fetching deposit_and_stake Txns from Near Blocks", bcolors.ENDC)
 
         if page_no > 5:
             print(bcolors.FAIL, "Too many pages, something is wrong", bcolors.ENDC)
@@ -285,6 +300,97 @@ def get_recent_stake_txns_for_validator(validator_addr, start_block, end_block):
             time.sleep(10)
 
     return stake_transactions, added_stake_amount
+
+
+def get_recent_UNSTAKE_txns_for_validator(validator_addr, start_block, end_block):
+    headers = {'accept': '*/*'}
+    
+
+    unstake_transactions = []
+    total_unstaked_amount = 0
+    
+    fetch_more_txns = True
+    page_no = 1
+    while(fetch_more_txns):
+        print(bcolors.OKCYAN, "Fetching unstake Txns from Near Blocks", bcolors.ENDC)
+        if page_no > 5:
+            print(bcolors.FAIL, "Too many pages, something is wrong", bcolors.ENDC)
+            break
+
+        fetch_more_txns = False
+        params = {'page': str(page_no), 'per_page': '25', 'order': 'desc', 'method': 'unstake'}
+        url = f'{NEAR_BLOCKS_API}/account/{validator_addr}/txns'
+        response = requests.get(url, params=params, headers=headers).json()
+
+        for txn in response['txns']:
+            for action in txn['actions']:
+                if action['method'] == "unstake" and txn['block']['block_height'] > start_block and txn['block']['block_height'] < end_block:
+                    unstake_transactions.append({
+                        "hash": txn['transaction_hash'],
+                        "sender": txn['predecessor_account_id'],
+                        "receipt_id" : txn['receipt_id']
+                    })
+        
+        if len(response['txns']) > 0 and response['txns'][-1]['block']['block_height'] > start_block:
+            fetch_more_txns = True
+            page_no += 1
+            time.sleep(10)
+
+
+    fetch_more_txns = True
+    page_no = 1
+    while(fetch_more_txns):
+        print(bcolors.OKCYAN, "Fetching unstake_all Txns from Near Blocks", bcolors.ENDC)
+        if page_no > 5:
+            print(bcolors.FAIL, "Too many pages, something is wrong", bcolors.ENDC)
+            break
+
+        fetch_more_txns = False
+        params = {'page': str(page_no), 'per_page': '25', 'order': 'desc', 'method': 'unstake_all'}
+        url = f'{NEAR_BLOCKS_API}/account/{validator_addr}/txns'
+        response = requests.get(url, params=params, headers=headers).json()
+
+        for txn in response['txns']:
+            for action in txn['actions']:
+                if action['method'] == "unstake_all" and txn['block']['block_height'] > start_block and txn['block']['block_height'] < end_block:
+                    unstake_transactions.append({
+                        "hash": txn['transaction_hash'],
+                        "sender": txn['predecessor_account_id'],
+                        "receipt_id" : txn['receipt_id']
+                    })
+        
+        if fetch_more_txns:
+            time.sleep(15)
+    
+    print(unstake_transactions)
+
+    # for each of the transactions fetch from JSON RPC the information about amount unstaked
+    for nearblocks_tx in unstake_transactions:
+        found_at_least_one_log = False
+        transaction = get_transaction_by_hash(nearblocks_tx['hash'], nearblocks_tx['sender'])
+        try:
+            for receipt_outcome in transaction['receipts_outcome']:
+                if receipt_outcome['id'] == nearblocks_tx['receipt_id']:
+                    all_logs = receipt_outcome['outcome']['logs'] # Of type "someone.near unstaking 120000. Spent XX staking shares. Total YY unstaked balance and ZZ staking shares"
+                    for unstaking_sentence_log in all_logs:
+                        words = unstaking_sentence_log.split(" ")
+                        if words[0] == f"@{nearblocks_tx['sender']}" and words[1] == "unstaking":
+                            amt = unstaking_sentence_log.split(" ")[2] # "120000."
+                            amt = amt[:-1] # => removing the dot "120000"
+                            total_unstaked_amount += int(amt)
+                            found_at_least_one_log = True
+                            break
+
+            assert found_at_least_one_log == True
+        except:
+            print(bcolors.FAIL, f"Error while fetching transaction from JSON RPC. Tx Hash : {nearblocks_tx['hash']}, sender: {nearblocks_tx['sender']}", bcolors.ENDC)
+
+
+        time.sleep(2)
+
+    return total_unstaked_amount
+
+
 
 def get_rewards_v2(addr, first_block, last_block):
     epoch_before = get_ALL_validators_info(first_block-1)  
@@ -318,8 +424,16 @@ def get_validator_commission(validator, block_num):
     return commission['numerator']
 
 if __name__ == '__main__':
-    print(get_block_details(81532822))
-    # vals = get_ALL_validators_info(81532290+43200)
-    # s = [int(vals[i]['stake']) for i in vals.keys()]
-    # s = sum(s)
-    # print(s)
+    # temp = get_recent_UNSTAKE_txns_for_validator('figment.poolv1.near', 81316291-43200, 81359491-43200)
+    # print("Temp: ", temp)
+    temp = get_recent_stake_txns_for_validator('epic.poolv1.near', 81791491, 81834691)
+    print("Temp: ", temp[1])
+    # json.dump(get_transaction_by_hash('32wyDci2Gu4uTSqycrdj6K2xjoW8HcrirU9VuQ5gbXC9', 'victor1994.near'), open('recent_tx.json', 'w'))
+    # payload = json.dumps({
+    #     "jsonrpc": "2.0", 
+    #     "id": "dontcare", 
+    #     "method": "EXPERIMENTAL_tx_status",
+    #     "params": [f"32wyDci2Gu4uTSqycrdj6K2xjoW8HcrirU9VuQ5gbXC9", f"victor1994.near"]
+    # })
+    # response = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()
+    # json.dump(response, open('recent_tx.json', 'w'))
