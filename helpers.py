@@ -427,7 +427,7 @@ if __name__ == '__main__':
     # temp = get_recent_UNSTAKE_txns_for_validator('figment.poolv1.near', 81316291-43200, 81359491-43200)
     # print("Temp: ", temp)
     temp = get_recent_stake_txns_for_validator('epic.poolv1.near', 81791491, 81834691)
-    print("Temp: ", temp[1])
+    print("Temp: ", temp)
     # json.dump(get_transaction_by_hash('32wyDci2Gu4uTSqycrdj6K2xjoW8HcrirU9VuQ5gbXC9', 'victor1994.near'), open('recent_tx.json', 'w'))
     # payload = json.dumps({
     #     "jsonrpc": "2.0", 
