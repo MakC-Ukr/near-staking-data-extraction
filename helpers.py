@@ -302,10 +302,76 @@ def get_recent_stake_txns_for_validator(validator_addr, start_block, end_block):
     return stake_transactions, added_stake_amount
 
 
+def get_recent_STAKE_txns_for_validator(validator_addr, start_block, end_block):
+    headers = {'accept': '*/*'}
+    page_no = 1
+
+    stake_transactions = []
+    fetch_more_txns = True
+    added_stake_amount = 0
+
+    while(fetch_more_txns):
+        print(bcolors.OKCYAN, "Fetching deposit_and_stake Txns from Near Blocks", bcolors.ENDC)
+
+        if page_no > 15:
+            print(bcolors.FAIL, "Too many pages, something is wrong", bcolors.ENDC)
+            break
+
+        fetch_more_txns = False
+        params = {'page': str(page_no), 'per_page': '25', 'order': 'desc', 'method': 'deposit_and_stake'}
+        url = f'{NEAR_BLOCKS_API}/account/{validator_addr}/txns'
+        response = requests.get(url, params=params, headers=headers).json()
+
+        for txn in response['txns']:
+            for action in txn['actions']:
+                if action['method'] == "deposit_and_stake" and txn['block']['block_height'] > start_block and txn['block']['block_height'] < end_block:
+                    added_stake_amount += txn['actions_agg']['deposit']
+                    stake_transactions.append({
+                        "hash": txn['transaction_hash'],
+                        "sender": txn['predecessor_account_id'],
+                        "receipt_id" : txn['receipt_id']
+                    })
+
+        # fetch more transactions from API if the last transaction is more recent than the start_block
+        if response['txns'][-1]['block']['block_height'] > start_block:
+            fetch_more_txns = True
+            page_no += 1
+            time.sleep(10)  
+
+    print(stake_transactions)
+
+    total_staked_amount = 0
+    
+    for nearblocks_tx in stake_transactions:
+        found_at_least_one_log = False
+        transaction = get_transaction_by_hash(nearblocks_tx['hash'], nearblocks_tx['sender'])
+        # try:
+        for receipt_outcome in transaction['receipts_outcome']:
+            if receipt_outcome['id'] == nearblocks_tx['receipt_id']:
+                all_logs = receipt_outcome['outcome']['logs'] # Of type "someone.near deposited 120000. New"
+                for unstaking_sentence_log in all_logs:
+                    words = unstaking_sentence_log.split(" ")
+                    if words[0] == f"@{nearblocks_tx['sender']}" and words[1] == "deposited":
+                        amt = unstaking_sentence_log.split(" ")[2] # "120000."
+                        amt = amt[:-1] # => removing the dot "120000"
+                        total_staked_amount += int(amt)
+                        found_at_least_one_log = True
+                        break
+
+        assert found_at_least_one_log == True
+        # except:
+        #     print(bcolors.FAIL, f"Error while fetching transaction from JSON RPC. Tx Hash : {nearblocks_tx['hash']}, sender: {nearblocks_tx['sender']}", bcolors.ENDC)
+
+
+        time.sleep(2)
+
+
+    return total_staked_amount
+
+
 def get_recent_UNSTAKE_txns_for_validator(validator_addr, start_block, end_block):
     headers = {'accept': '*/*'}
     
-
     unstake_transactions = []
     total_unstaked_amount = 0
     
@@ -390,8 +456,6 @@ def get_recent_UNSTAKE_txns_for_validator(validator_addr, start_block, end_block
 
     return total_unstaked_amount
 
-
-
 def get_rewards_v2(addr, first_block, last_block):
     epoch_before = get_ALL_validators_info(first_block-1)  
     epoch_curr = get_ALL_validators_info(last_block-1)
@@ -424,16 +488,46 @@ def get_validator_commission(validator, block_num):
     return commission['numerator']
 
 if __name__ == '__main__':
-    # temp = get_recent_UNSTAKE_txns_for_validator('figment.poolv1.near', 81316291-43200, 81359491-43200)
-    # print("Temp: ", temp)
-    temp = get_recent_stake_txns_for_validator('epic.poolv1.near', 81791491, 81834691)
-    print("Temp: ", temp)
-    # json.dump(get_transaction_by_hash('32wyDci2Gu4uTSqycrdj6K2xjoW8HcrirU9VuQ5gbXC9', 'victor1994.near'), open('recent_tx.json', 'w'))
-    # payload = json.dumps({
-    #     "jsonrpc": "2.0", 
-    #     "id": "dontcare", 
-    #     "method": "EXPERIMENTAL_tx_status",
-    #     "params": [f"32wyDci2Gu4uTSqycrdj6K2xjoW8HcrirU9VuQ5gbXC9", f"victor1994.near"]
-    # })
-    # response = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()
-    # json.dump(response, open('recent_tx.json', 'w'))
+    print("Hello world")
+    # print(int(get_rewards_v2('twinstake.poolv1.near', 82180291, 82223491)))
+    
+    payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "validators","params": [80365890]})
+    curr_validators = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()['result']['current_validators']
+    stake_ts= -1
+    for v in curr_validators:
+        if v['account_id'] == 'twinstake.poolv1.near':
+            print(v['stake'])
+
+
+
+    # last_block_epoch_1675 = 82223490
+    # epoch_curr = 1675
+    # save = []
+
+    # for i in range(1625, 1676):
+    #     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "validators","params": [last_block_epoch_1675]})
+    #     curr_validators = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()['result']['current_validators']
+    #     stake_ts= -1
+    #     for v in curr_validators:
+    #         if v['account_id'] == 'twinstake.poolv1.near':
+    #             stake_ts = v['stake']
+    #             break
+
+
+    #     save.append({
+    #         'epoch': epoch_curr,
+    #         'last_block': last_block_epoch_1675, 
+    #         'stake': float(stake_ts)/1e24
+    #     })
+    #     print(epoch_curr)
+
+    #     epoch_curr -= 1
+    #     last_block_epoch_1675 -= 43200
+    #     pd.DataFrame(save).to_csv('twinstake.csv', index=False)
+
+
+
+# 82050691, 82093891  ==> 1672
+# 82093891, 82137091  ==> 1673
+# 82137091, 82180291  ==> 1674
+# 82180291, 82223491  ==> 1675
