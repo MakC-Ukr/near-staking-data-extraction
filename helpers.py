@@ -59,7 +59,11 @@ def get_avg_block_time_for_epoch(start_block):
             start_time+=1
             payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"block_id": start_block}})
             print(start_block)
-            start_time = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']['timestamp']
+            try:
+                start_time = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['header']['timestamp']
+            except:
+                start_time = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()['result']['header']['timestamp']
+                print("Archival node was used")
         except:
             start_block+=1
             blocks_to_subtract+=1
@@ -104,7 +108,11 @@ def get_active_validator_set():
 def get_block_details(block_height = -1):
     res_dict = {}
     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "block","params": {"finality": "final"} if block_height == -1 else {"block_id": block_height}})
-    response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']
+    try:
+        response = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']
+    except:
+        response = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()['result']
+        print("Archival node was used")
     
     res_dict['epoch_id'] = response['header']['epoch_id']
     res_dict['total_supply'] = response['header']['total_supply']
@@ -144,7 +152,11 @@ def get_ALL_validators_info(block_num):
     """returns produced vs expected blocks/chunks information for all the validators. The block number passed must be the last block in the epoch."""
     res_dict = {}
     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "validators","params": [block_num]})
-    curr_validators = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['current_validators']
+    try:
+        curr_validators = requests.request("POST", RPC_URL_PUBLIC, headers=headers, data=payload).json()['result']['current_validators']
+    except:
+        curr_validators = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()['result']['current_validators']
+        print("Using archival node")
     for v in curr_validators:
         single_val = {}
         single_val['produced_blocks'] = v['num_produced_blocks']
@@ -489,45 +501,3 @@ def get_validator_commission(validator, block_num):
 
 if __name__ == '__main__':
     print("Hello world")
-    # print(int(get_rewards_v2('twinstake.poolv1.near', 82180291, 82223491)))
-    
-    payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "validators","params": [80365890]})
-    curr_validators = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()['result']['current_validators']
-    stake_ts= -1
-    for v in curr_validators:
-        if v['account_id'] == 'twinstake.poolv1.near':
-            print(v['stake'])
-
-
-
-    # last_block_epoch_1675 = 82223490
-    # epoch_curr = 1675
-    # save = []
-
-    # for i in range(1625, 1676):
-    #     payload = json.dumps({"jsonrpc": "2.0","id": "dontcare","method": "validators","params": [last_block_epoch_1675]})
-    #     curr_validators = requests.request("POST", RPC_URL_PUBLIC_ARCHIVAL, headers=headers, data=payload).json()['result']['current_validators']
-    #     stake_ts= -1
-    #     for v in curr_validators:
-    #         if v['account_id'] == 'twinstake.poolv1.near':
-    #             stake_ts = v['stake']
-    #             break
-
-
-    #     save.append({
-    #         'epoch': epoch_curr,
-    #         'last_block': last_block_epoch_1675, 
-    #         'stake': float(stake_ts)/1e24
-    #     })
-    #     print(epoch_curr)
-
-    #     epoch_curr -= 1
-    #     last_block_epoch_1675 -= 43200
-    #     pd.DataFrame(save).to_csv('twinstake.csv', index=False)
-
-
-
-# 82050691, 82093891  ==> 1672
-# 82093891, 82137091  ==> 1673
-# 82137091, 82180291  ==> 1674
-# 82180291, 82223491  ==> 1675

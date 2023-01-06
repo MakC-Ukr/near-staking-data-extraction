@@ -19,5 +19,10 @@
     "p2p-org.poolv1.near",
     "pandora.poolv1.near",
     "cryptium.poolv1.near",
-    "twinstake.poolv1.near"
+    "twinstake.poolv1.near",
+    "binancestaking.poolv1.near",
+    "bitcoinsuisse.poolv1.near",
+    "shardlabs.poolv1.near",
+    "sicmundus.poolv1.near",
+    "dariya.poolv1.near"
 ]
