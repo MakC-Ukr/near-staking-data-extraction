@@ -3,3 +3,4 @@ venv/
 data/
 data_cache/
 __pycache__/
+service_credentials.json

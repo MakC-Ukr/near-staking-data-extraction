@@ -5,6 +5,7 @@ import pandas as pd
 import time
 import datetime
 
+No_Validators = 26
 
 def validate_historical_file():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -14,7 +15,6 @@ def validate_historical_file():
     df_historical = df_historical[df_historical['epoch_height'] >= 1660]
     df_historical.reset_index(drop=True, inplace=True)
 
-    No_Validators = int((len(df_historical.columns)-df_historical.columns.get_loc("block_time_empirical")) / 15)
     df_output = pd.DataFrame(columns = ['Epoch Number', 'Validator Name', 'Stake', 'blocks_prod_ratio', 'chunks_prod_ratio','UptimePCT', 'Uptime', 'Actual Rewards', 'Expected Rewards', 'Realized APY', 'Expected APY', 'Absolute Difference in Rewards', 'Absolute Difference in APY', '% Difference in Rewards', 'Rewards Method Used'],
                             index = range(No_Validators))
     df_outputHist = pd.DataFrame(columns = ['Epoch Number', 'Validator Name', 'Stake', 'blocks_prod_ratio', 'chunks_prod_ratio','UptimePCT', 'Uptime', 'Actual Rewards', 'Expected Rewards', 'Realized APY', 'Expected APY',
@@ -106,10 +106,63 @@ def validate_historical_file():
             df_output['Absolute Difference in APY'][i]     = (df_output['Expected APY'][i]  -   df_output['Realized APY'][i])
             df_output['Rewards Method Used'][i]            = method_used_for_rewards
         df_outputHist = df_outputHist.append(df_output, ignore_index = True)
+        df_outputHist = df_outputHist.loc[(df_outputHist["Validator Name"] != ' ') & (df_outputHist["Stake"] > 0)] 
 
     df_outputHist.to_csv(f"{base_dir}/data/val_out.csv", index = False)
+
+def create_historical_gds():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    path = f"{base_dir}/data/near_historical.csv"
+    df_historical= pd.read_csv(path)
+
+    df_historical = df_historical[df_historical['epoch_height'] >= 1660]
+    df_historical.reset_index(drop=True, inplace=True)
+    normal_cols = list(df_historical.columns[:16])
+
+    df_ls = []
+    for ind, row in df_historical.iterrows():
+        for val_index in range(No_Validators):
+            new_row = {}
+            for col in normal_cols:
+                new_row[col] = row[col]
+                new_row['Validator Address'] = row[f'val_{val_index}_name']
+
+                new_row['Expected Blocks'] = row[f'val_{val_index}_expected_blocks']
+                new_row['Produced Blocks'] = row[f'val_{val_index}_produced_blocks']
+                new_row['Expected Chunks'] = row[f'val_{val_index}_expected_chunks']
+                new_row['Produced Chunks'] = row[f'val_{val_index}_produced_chunks']
+                new_row['Is Slashed'] = row[f'val_{val_index}_is_slashed']
+                if new_row['Is Slashed'] == 1:
+                    print("SLASHED")
+            
+                try:
+                    new_row['Total Stake'] = int(row[f'val_{val_index}_sum_stake'])//1e24
+                except:
+                    new_row['Total Stake'] = 0
+                
+                try:
+                    new_row['Stake Added in Epoch'] = int(row[f'val_{val_index}_added_stake'])//1e24
+                except:
+                    new_row['Stake Added in Epoch'] = 0
+            
+                try:
+                    new_row['Stake Removed in Epoch'] = int(row[f'val_{val_index}_unstaked_amount'])//1e24
+                except:
+                    new_row['Stake Removed in Epoch'] = 0
+                
+                new_row['Commission'] = row[f'val_{val_index}_commission']
+            df_ls.append(new_row)
+
+    path = f"{base_dir}/data/near_historical_gds.csv"
+
+    # Added by Dave. Is the stake condition ok?
+    near_historical_gds = pd.DataFrame(df_ls)
+    near_historical_gds = near_historical_gds.loc[(near_historical_gds["Validator Address"] != ' ') & (near_historical_gds["Total Stake"] > 0)] 
+
+    pd.DataFrame(near_historical_gds).to_csv(path, index=False)
 
 
 
 if __name__ == "__main__":
     validate_historical_file()
+    create_historical_gds()
