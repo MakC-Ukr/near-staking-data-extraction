@@ -1,5 +1,5 @@
 from helpers import *
-from validate import validate_historical_file
+from validate import validate_historical_file, create_historical_gds
 
 t = time.time()
 base_dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -73,6 +73,9 @@ if len(blocks_df) > 0 and curr_block_details['epoch_id'] != blocks_df.iloc[-1]['
     historical_df = pd.concat( [historical_df, pd.DataFrame([new_row])], ignore_index=True)
     historical_df.to_csv(historical_csv_path, index=False)
 
+    validate_historical_file()
+    create_historical_gds()
+
 # No new epoch detected. Record latest block in blocks_recorded.csv
 new_row = {}
 constant_vals = get_constant_vals()
@@ -83,10 +86,5 @@ for key in curr_block_details:
 new_row['total_staked'] = get_total_stake()
 blocks_df = pd.concat( [blocks_df, pd.DataFrame([new_row])], ignore_index=True)
 blocks_df.to_csv(blocks_csv_path, index=False)
-
-
-# run validation code
-validate_historical_file()
-
 
 print(bcolors.OKGREEN, "Time taken:", time.time()-t, bcolors.ENDC)

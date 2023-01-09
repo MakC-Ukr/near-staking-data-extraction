@@ -28,10 +28,14 @@ def generate_chart():
     charting_df = pd.DataFrame()
     charting_df.index = df['Epoch Number'].unique()
     charting_df['Twinstake APY'] = list(df[df['Validator Name'] == 'twinstake.poolv1.near']['Realized APY'])
-    charting_df['Largest Stakers APY (Median)'] = df.groupby('Epoch Number')['Realized APY'].median()
-
-    # For rows where APY is more than 15%, set cell to NaN    
     charting_df.loc[charting_df['Twinstake APY'] > 15, 'Twinstake APY'] = np.nan
+
+    ls = [i for i in df[df['Block Producer'] == 1].groupby('Epoch Number')['Realized APY'].median() - df[df['Block Producer'] == 0].groupby('Epoch Number')['Realized APY'].median() if np.abs(i) > 0.02]
+    if len(ls) > 0:
+        charting_df['Blocks Producers APY (Median)'] = df[df['Block Producer'] == 1].groupby('Epoch Number')['Realized APY'].median()
+        charting_df['Chunk Producers APY (Median)'] = df[df['Block Producer'] == 0].groupby('Epoch Number')['Realized APY'].median()
+        
+    charting_df['Largest Stakers APY (Median)'] = df[df['Block Producer'] == 1].groupby('Epoch Number')['Realized APY'].median()
     charting_df.loc[charting_df['Largest Stakers APY (Median)'] > 15, 'Largest Stakers APY (Median)'] = np.nan
 
     # Plot the chart
@@ -41,10 +45,18 @@ def generate_chart():
     ax.set_ylabel('APY (%)')
     ax.set_ylim([10,12])
     ax.set_title(f"NEAR Staking APY (Last 12 Epochs)")
-    # plt.subplots_adjust(right=1.02)
 
+    # Add the APY values to the chart
     for ind, row in charting_df.iterrows():
         ax.text(ind-0.5, row['Twinstake APY']+0.05, str(round(float(row['Twinstake APY']),2)))
+
+    # Plot the delta APY for TS vs Avg
+    delta_apy = abs(round(charting_df['Twinstake APY'] - charting_df['Largest Stakers APY (Median)'],2))
+    ax2 = ax.twinx()
+    ax2.plot(delta_apy, color='blue')
+    ax2.tick_params(axis='y', labelcolor='blue')
+    ax2.set_ylim([0.005,2])
+    ax2.set_ylabel('Absolute Difference in APY (TS vs Avg)')
 
     # Save the chart to a file
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -54,10 +66,9 @@ def generate_chart():
 def send_chart_to_channel(_rewards, _stake, _apy):
     slack_message = f'---------------------------------\n'
     slack_message += f'*Historical performance of TwinStake validator on Near* \n'
-    slack_message += f'Rewards earned in last 2 epochs (~1 day): {_rewards} NEAR \n'
-    slack_message += f'AUD: {int(_stake)} SOL \n'
+    slack_message += f'Rewards earned in last 2 epochs (~27 hours): {round(_rewards,2)} NEAR \n'
+    slack_message += f'AUD: {int(_stake)} NEAR \n'
     slack_message += f'APY: {round(_apy, 2)} % \n'
-
 
     client = WebClient(TEST_SLACK_UPLOAD_TOKEN)
     chart_path = os.path.dirname(__file__) + '/data/chart.png'
@@ -78,4 +89,5 @@ def daily_bot_send_chart():
     send_chart_to_channel(rewards, stake, apy)
 
 if __name__ == "__main__":
-    daily_bot_send_chart()
+    # daily_bot_send_chart()
+    generate_chart()

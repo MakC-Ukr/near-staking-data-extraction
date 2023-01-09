@@ -15,9 +15,9 @@ def validate_historical_file():
     df_historical = df_historical[df_historical['epoch_height'] >= 1660]
     df_historical.reset_index(drop=True, inplace=True)
 
-    df_output = pd.DataFrame(columns = ['Epoch Number', 'Validator Name', 'Stake', 'blocks_prod_ratio', 'chunks_prod_ratio','UptimePCT', 'Uptime', 'Actual Rewards', 'Expected Rewards', 'Realized APY', 'Expected APY', 'Absolute Difference in Rewards', 'Absolute Difference in APY', '% Difference in Rewards', 'Rewards Method Used'],
+    df_output = pd.DataFrame(columns = ['Epoch Number', 'Validator Name', 'Stake', 'Block Producer', 'blocks_prod_ratio', 'chunks_prod_ratio','UptimePCT', 'Uptime', 'Actual Rewards', 'Expected Rewards', 'Realized APY', 'Expected APY', 'Absolute Difference in Rewards', 'Absolute Difference in APY', '% Difference in Rewards', 'Rewards Method Used'],
                             index = range(No_Validators))
-    df_outputHist = pd.DataFrame(columns = ['Epoch Number', 'Validator Name', 'Stake', 'blocks_prod_ratio', 'chunks_prod_ratio','UptimePCT', 'Uptime', 'Actual Rewards', 'Expected Rewards', 'Realized APY', 'Expected APY',
+    df_outputHist = pd.DataFrame(columns = ['Epoch Number', 'Validator Name', 'Stake', 'Block Producer', 'blocks_prod_ratio', 'chunks_prod_ratio','UptimePCT', 'Uptime', 'Actual Rewards', 'Expected Rewards', 'Realized APY', 'Expected APY',
                                             'Absolute Difference in Rewards', 'Absolute Difference in APY', '% Difference in Rewards'])
 
     for row in range (2, len(df_historical)):
@@ -48,10 +48,12 @@ def validate_historical_file():
             num_expected_chunks                = float(df_historical[f'val_{i}_expected_chunks'][row-2])
 
             if num_expected_blocks == 0 and num_expected_chunks == 0:
+                df_output['Block Producer'][i] = None
                 uptime_Pct_v = 0
                 blocks_prod_ratio = 0
                 chunks_prod_ratio = 0
             elif num_expected_blocks == 0:
+                df_output['Block Producer'][i] = 0
                 if num_produced_chunks/num_expected_chunks < CHUNK_PRODUCER_KICKOUT_THRESHOLD/100:
                     uptime_Pct_v = 0
                     blocks_prod_ratio = 0
@@ -61,10 +63,12 @@ def validate_historical_file():
                     blocks_prod_ratio = 0
                     chunks_prod_ratio = num_produced_chunks/num_expected_chunks
             elif num_produced_blocks/num_expected_blocks < BLOCK_PRODUCER_KICKOUT_THRESHOLD/100 or num_produced_chunks/num_expected_chunks < CHUNK_PRODUCER_KICKOUT_THRESHOLD/100:
+                df_output['Block Producer'][i] = 1
                 uptime_Pct_v = 0
                 blocks_prod_ratio = num_produced_blocks/num_expected_blocks
                 chunks_prod_ratio = num_produced_chunks/num_expected_chunks
             else:
+                df_output['Block Producer'][i] = 1
                 uptime_Pct_v = (num_produced_blocks/num_expected_blocks + num_produced_chunks/num_expected_chunks)/2
                 blocks_prod_ratio = num_produced_blocks/num_expected_blocks
                 chunks_prod_ratio = num_produced_chunks/num_expected_chunks
