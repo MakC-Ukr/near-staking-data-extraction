@@ -89,5 +89,4 @@ def daily_bot_send_chart():
     send_chart_to_channel(rewards, stake, apy)
 
 if __name__ == "__main__":
-    # daily_bot_send_chart()
-    generate_chart()
+    daily_bot_send_chart()
